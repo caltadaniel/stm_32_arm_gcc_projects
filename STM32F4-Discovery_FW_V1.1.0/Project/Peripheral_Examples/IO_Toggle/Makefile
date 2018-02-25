@@ -1,5 +1,6 @@
 # Put your stlink folder here so make burn will work.
-STLINK=~/stlink.git
+STLINK=/home/blacksmith/usr/local/bin
+
 
 SRCS=main.c system_stm32f4xx.c stm32f4xx_it.c
 

@@ -1,6 +1,7 @@
 
 # Put your stlink folder here so make burn will work.
-STLINK=~/stlink.git
+STLINK=/usr/local/bin
+
 
 STM_COMMON = ../STM32F4-Discovery_FW_V1.1.0
 
