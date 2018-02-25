@@ -222,7 +222,9 @@ void TIM3_IRQHandler(void)
 
     /* LED4 toggling with frequency = 4.57 Hz */
     STM_EVAL_LEDToggle(LED4);
+    USART_puts(USART1, "Counting!\r\n");
 	capture = TIM_GetCapture1(TIM3);
     TIM_SetCompare1(TIM3, capture + CCR1_Val);
+    
   }
 }
