@@ -1,14 +1,24 @@
+//TIM3CLK frequency is set to SystemCoreClock / 2 (Hz). In our case 168MHz/2
+// the prescaler can be computed as Prescaler = (TIM3CLK / TIM3 counter clock) - 1 where TIM3 conuter clock is the desired clock frequency
 
-
-#define USE_STDPERIPH_DRIVER
-//#include <stm32f4xx.h>
-//#include <misc.h>			 // I recommend you have a look at these in the ST firmware folder
-//#include <stm32f4xx_usart.h> // under Libraries/STM32F4xx_StdPeriph_Driver/inc and src
+// #define USE_STDPERIPH_DRIVER do not use it since it is defined on the makefile
 #include "stm32f4_discovery.h"
 #include "stm32f4xx.h"
 
 #define MAX_STRLEN 12 // this is the maximum string length of our string in characters
 volatile char received_string[MAX_STRLEN+1]; // this will hold the recieved string
+
+TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+TIM_OCInitTypeDef  TIM_OCInitStructure;
+
+__IO uint16_t CCR1_Val = 54618;//6826; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
+// so the TIM3 Channel 1 generates an interrupt each 13.65ms
+uint16_t PrescalerValue = 0;
+uint16_t capture = 0;
+
+//private fct prototype 
+void TIM_Config(void);
+
 
 void Delay(__IO uint32_t nCount) {
   while(nCount--) {
@@ -115,6 +125,33 @@ void USART_puts(USART_TypeDef* USARTx, volatile char *s){
 }
 
 int main(void) {
+  TIM_Config();
+  /* Compute the prescaler value */
+  PrescalerValue = (uint16_t) ((SystemCoreClock / 2) / 500000) - 1;
+  
+  /* Time base configuration */
+  TIM_TimeBaseStructure.TIM_Period = 65535;
+  TIM_TimeBaseStructure.TIM_Prescaler = 0;
+  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+
+  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+  
+  /* Output Compare Timing Mode configuration: Channel1. For now we use onli this */
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_Pulse = CCR1_Val;
+  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+
+  TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+
+  TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Disable);
+  
+  /* TIM Interrupts enable */
+  TIM_ITConfig(TIM3, TIM_IT_CC1, ENABLE);
+
+  /* TIM3 enable counter */
+  TIM_Cmd(TIM3, ENABLE);
   
   init_USART1(9600); // initialize USART1 @ 9600 baud
 
@@ -148,4 +185,44 @@ void USART1_IRQHandler(void){
 			USART_puts(USART1, received_string);
 		}
 	}
+}
+
+void TIM_Config(void)
+{
+	NVIC_InitTypeDef NVIC_InitStructure;
+
+  /* TIM3 clock enable */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+
+  /* Enable the TIM3 gloabal Interrupt */
+  NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+  
+    /* Initialize Leds mounted on STM32F4-Discovery board */
+  STM_EVAL_LEDInit(LED4);
+  STM_EVAL_LEDInit(LED3);
+  STM_EVAL_LEDInit(LED5);
+  STM_EVAL_LEDInit(LED6);
+
+  /* Turn on LED4, LED3, LED5 and LED6 */
+  STM_EVAL_LEDOn(LED4);
+  STM_EVAL_LEDOn(LED3);
+  STM_EVAL_LEDOn(LED5);
+  STM_EVAL_LEDOn(LED6);
+}
+
+void TIM3_IRQHandler(void)
+{
+  if (TIM_GetITStatus(TIM3, TIM_IT_CC1) != RESET)
+  {
+    TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
+
+    /* LED4 toggling with frequency = 4.57 Hz */
+    STM_EVAL_LEDToggle(LED4);
+	capture = TIM_GetCapture1(TIM3);
+    TIM_SetCompare1(TIM3, capture + CCR1_Val);
+  }
 }

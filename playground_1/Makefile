@@ -11,7 +11,8 @@ SRCS=main.c system_stm32f4xx.c
 PROJ_NAME=playground_1
 
 # Library modules. Add here all the files you want to add
-SRCS += stm32f4xx_gpio.c stm32f4xx_rcc.c stm32f4xx_exti.c stm32f4xx_usart.c misc.c
+SRCS += stm32f4xx_gpio.c stm32f4xx_rcc.c stm32f4xx_exti.c stm32f4xx_usart.c misc.c stm32f4xx_tim.c stm32f4xx_syscfg.c
+SRCS += stm32f4_discovery.c
 
 # Put your STM32F4 library code directory here
 STM_COMMON=../STM32F4-Discovery_FW_V1.1.0
@@ -39,7 +40,7 @@ CFLAGS += -I$(STM_COMMON)/Libraries/STM32F4xx_StdPeriph_Driver/inc
 SRCS += $(STM_COMMON)/Libraries/CMSIS/ST/STM32F4xx/Source/Templates/TrueSTUDIO/startup_stm32f4xx.s 
 OBJS = $(SRCS:.c=.o)
 
-vpath %.c $(STM_COMMON)/Libraries/STM32F4xx_StdPeriph_Driver/src
+vpath %.c $(STM_COMMON)/Libraries/STM32F4xx_StdPeriph_Driver/src $(STM_COMMON)/Utilities/STM32F4-Discovery
 
 .PHONY: proj
 
