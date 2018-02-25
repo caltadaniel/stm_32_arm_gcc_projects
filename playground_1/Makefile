@@ -5,15 +5,14 @@ STLINK=/home/blacksmith/usr/local/bin
 #per il portatile grande e solo /usr/local/bin
 
 # Put your source files here (or *.c, etc)
-SRCS=main.c system_stm32f4xx.c
+SRCS=main.c system_stm32f4xx.c stm32f4xx_it.c
 
 # Binaries will be generated with this name (.elf, .bin, .hex, etc)
 PROJ_NAME=playground_1
 
 # Library modules. Add here all the files you want to add
 SRCS += stm32f4xx_gpio.c stm32f4xx_rcc.c stm32f4xx_exti.c stm32f4xx_usart.c misc.c stm32f4xx_tim.c stm32f4xx_syscfg.c
-SRCS += stm32f4_discovery.c
-
+SRCS += stm32f4_discovery.c 
 # Put your STM32F4 library code directory here
 STM_COMMON=../STM32F4-Discovery_FW_V1.1.0
 
@@ -22,9 +21,13 @@ STM_COMMON=../STM32F4-Discovery_FW_V1.1.0
 STM_COMMON = ../STM32F4-Discovery_FW_V1.1.0
 
 CC=arm-none-eabi-gcc
+SIZE=arm-none-eabi-size
 OBJCOPY=arm-none-eabi-objcopy
 
-CFLAGS  = -g -O2 -Wall -Tstm32_flash.ld 
+CFLAGS  = -g -O2 -Wall -Tstm32_flash.ld
+#CFLAGS  = -ggdb -O2 -Wall -Tstm32_flash.ld 
+
+
 CFLAGS += -DUSE_STDPERIPH_DRIVER
 CFLAGS += -mlittle-endian -mthumb -mcpu=cortex-m4 -mthumb-interwork
 CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
@@ -59,3 +62,10 @@ clean:
 # Flash the STM32F4
 burn: proj
 	$(STLINK)/st-flash write $(PROJ_NAME).bin 0x8000000
+
+gdb: all
+	arm-none-eabi-gdb $(PROJ_NAME).elf
+
+# Start OpenOCD GDB server (supports semihosting)
+openocd: 
+	openocd -f board/stm32f4discovery.cfg 

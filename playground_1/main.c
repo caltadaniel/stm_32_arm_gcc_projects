@@ -4,21 +4,25 @@
 // #define USE_STDPERIPH_DRIVER do not use it since it is defined on the makefile
 #include "stm32f4_discovery.h"
 #include "stm32f4xx.h"
+#include <stdio.h>
 
 #define MAX_STRLEN 12 // this is the maximum string length of our string in characters
 volatile char received_string[MAX_STRLEN+1]; // this will hold the recieved string
-
+char buffer[20];
 TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 TIM_OCInitTypeDef  TIM_OCInitStructure;
 
-__IO uint16_t CCR1_Val = 54618;//6826; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
+__IO uint16_t CCR1_Val = 54618;
+__IO uint16_t CCR2_Val = 27309;
+__IO uint16_t CCR3_Val = 13654;
+__IO uint16_t CCR4_Val = 6826; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
 // so the TIM3 Channel 1 generates an interrupt each 13.65ms
 uint16_t PrescalerValue = 0;
-uint16_t capture = 0;
 
 //private fct prototype 
 void TIM_Config(void);
-
+void InitGPIO(void);
+void PutNumber(USART_TypeDef *, uint32_t);
 
 void Delay(__IO uint32_t nCount) {
   while(nCount--) {
@@ -125,13 +129,22 @@ void USART_puts(USART_TypeDef* USARTx, volatile char *s){
 }
 
 int main(void) {
+  /* Init thd gpioD*/
+  InitGPIO();
+  init_USART1(9600); // initialize USART1 @ 9600 baud
   TIM_Config();
   /* Compute the prescaler value */
   PrescalerValue = (uint16_t) ((SystemCoreClock / 2) / 500000) - 1;
-  
+  USART_puts(USART1, "Core clock: ");
+  PutNumber(USART1, SystemCoreClock);
+  USART_puts(USART1, "\r\n");
+  USART_puts(USART1, "Prescaler: ");
+  PutNumber(USART1, PrescalerValue);
+  USART_puts(USART1, "\r\n");
+  //USART_puts(USART1, SystemCoreClock);
   /* Time base configuration */
   TIM_TimeBaseStructure.TIM_Period = 65535;
-  TIM_TimeBaseStructure.TIM_Prescaler = 0;
+  TIM_TimeBaseStructure.TIM_Prescaler = PrescalerValue;
   TIM_TimeBaseStructure.TIM_ClockDivision = 0;
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 
@@ -147,13 +160,37 @@ int main(void) {
 
   TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Disable);
   
+  /* Output Compare Timing Mode configuration: Channel2 */
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_Pulse = CCR2_Val;
+
+  TIM_OC2Init(TIM3, &TIM_OCInitStructure);
+
+  TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Disable);
+
+  /* Output Compare Timing Mode configuration: Channel3 */
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_Pulse = CCR3_Val;
+
+  TIM_OC3Init(TIM3, &TIM_OCInitStructure);
+
+  TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Disable);
+
+  /* Output Compare Timing Mode configuration: Channel4 */
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_Pulse = CCR4_Val;
+
+  TIM_OC4Init(TIM3, &TIM_OCInitStructure);
+
+  TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Disable);
+   
   /* TIM Interrupts enable */
-  TIM_ITConfig(TIM3, TIM_IT_CC1, ENABLE);
+  TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
 
   /* TIM3 enable counter */
   TIM_Cmd(TIM3, ENABLE);
   
-  init_USART1(9600); // initialize USART1 @ 9600 baud
+ 
 
   USART_puts(USART1, "Init complete! Hello World!\r\n"); // just send a message to indicate that it works
 
@@ -214,17 +251,36 @@ void TIM_Config(void)
   STM_EVAL_LEDOn(LED6);
 }
 
-void TIM3_IRQHandler(void)
+void InitGPIO(void)
 {
-  if (TIM_GetITStatus(TIM3, TIM_IT_CC1) != RESET)
-  {
-    TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
+	/* enable the peripheral clock for the GPIOD
+	 */
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	
+	GPIO_InitTypeDef  GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13| GPIO_Pin_14| GPIO_Pin_15;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	GPIO_ResetBits(GPIOA, GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
+}
 
-    /* LED4 toggling with frequency = 4.57 Hz */
-    STM_EVAL_LEDToggle(LED4);
-    USART_puts(USART1, "Counting!\r\n");
-	capture = TIM_GetCapture1(TIM3);
-    TIM_SetCompare1(TIM3, capture + CCR1_Val);
-    
-  }
+void PutNumber(USART_TypeDef *usart, uint32_t x)
+{
+	char value[10];
+	int i = 0;
+	do 
+	{
+		value[i++] = (char)(x % 10) + '0';
+		x /= 10;
+	}while(x);
+	i++;
+	while(i)
+	{
+		USART_SendData(usart, value[--i]);
+		while( !(usart->SR & 0x00000040) );
+	}
 }
