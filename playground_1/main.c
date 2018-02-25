@@ -15,7 +15,7 @@ TIM_OCInitTypeDef  TIM_OCInitStructure;
 __IO uint16_t CCR1_Val = 54618;
 __IO uint16_t CCR2_Val = 27309;
 __IO uint16_t CCR3_Val = 13654;
-__IO uint16_t CCR4_Val = 6826; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
+__IO uint16_t CCR4_Val = 1; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
 // so the TIM3 Channel 1 generates an interrupt each 13.65ms
 uint16_t PrescalerValue = 0;
 
@@ -134,7 +134,7 @@ int main(void) {
   init_USART1(9600); // initialize USART1 @ 9600 baud
   TIM_Config();
   /* Compute the prescaler value */
-  PrescalerValue = (uint16_t) ((SystemCoreClock / 2) / 500000) - 1;
+  PrescalerValue = (uint16_t) ((SystemCoreClock/2) / 500000) - 1;
   USART_puts(USART1, "Core clock: ");
   PutNumber(USART1, SystemCoreClock);
   USART_puts(USART1, "\r\n");
