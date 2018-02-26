@@ -22,10 +22,10 @@ STM_COMMON = ../STM32F4-Discovery_FW_V1.1.0
 
 CC=arm-none-eabi-gcc
 SIZE=arm-none-eabi-size
-OBJCOPY=arm-none-eabi-objcopy
+#OBJCOPY=arm-none-eabi-objcopy
 
-CFLAGS  = -g -O2 -Wall -Tstm32_flash.ld
-#CFLAGS  = -ggdb -O2 -Wall -Tstm32_flash.ld 
+#CFLAGS  = -g -O2 -Wall -Tstm32_flash.ld
+CFLAGS  = -ggdb -O2 -Wall -Tstm32_flash.ld 
 
 
 CFLAGS += -DUSE_STDPERIPH_DRIVER
@@ -45,27 +45,48 @@ OBJS = $(SRCS:.c=.o)
 
 vpath %.c $(STM_COMMON)/Libraries/STM32F4xx_StdPeriph_Driver/src $(STM_COMMON)/Utilities/STM32F4-Discovery
 
-.PHONY: proj
+#.PHONY: proj
 
-all: proj
+#all: proj
 
-proj: $(PROJ_NAME).elf
+#proj: $(PROJ_NAME).elf
 
-$(PROJ_NAME).elf: $(SRCS)
-	$(CC) $(CFLAGS) $^ -o $@ 
-	$(OBJCOPY) -O ihex $(PROJ_NAME).elf $(PROJ_NAME).hex
-	$(OBJCOPY) -O binary $(PROJ_NAME).elf $(PROJ_NAME).bin
+#$(PROJ_NAME).elf: $(SRCS)
+#	$(CC) $(CFLAGS) $^ -o $@ 
+#	$(OBJCOPY) -O ihex $(PROJ_NAME).elf $(PROJ_NAME).hex
+#	$(OBJCOPY) -O binary $(PROJ_NAME).elf $(PROJ_NAME).bin
 
-clean:
-	rm -f *.o $(PROJ_NAME).elf $(PROJ_NAME).hex $(PROJ_NAME).bin
+#clean:
+#	rm -f *.o $(PROJ_NAME).elf $(PROJ_NAME).hex $(PROJ_NAME).bin
 
 # Flash the STM32F4
-burn: proj
-	$(STLINK)/st-flash write $(PROJ_NAME).bin 0x8000000
+#burn: proj
+#	$(STLINK)/st-flash write $(PROJ_NAME).bin 0x8000000
 
+SEMIHOSTING_FLAGS = --specs=rdimon.specs -lc -lrdimon 
+
+
+
+.PHONY: all
+
+all: $(PROJ_NAME).elf
+
+$(PROJ_NAME).elf: $(SRCS)
+	$(CC) $(SEMIHOSTING_FLAGS) $(CFLAGS) $^ -o $@    
+	$(SIZE) $@    
+
+clean:
+	rm -f $(PROJ_NAME).elf 
+
+
+#######################################################
+# Debugging targets
+#######################################################
 gdb: all
 	arm-none-eabi-gdb $(PROJ_NAME).elf
 
 # Start OpenOCD GDB server (supports semihosting)
 openocd: 
 	openocd -f board/stm32f4discovery.cfg 
+
+

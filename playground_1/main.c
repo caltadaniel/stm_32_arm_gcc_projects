@@ -141,7 +141,6 @@ int main(void) {
   USART_puts(USART1, "Prescaler: ");
   PutNumber(USART1, PrescalerValue);
   USART_puts(USART1, "\r\n");
-  //USART_puts(USART1, SystemCoreClock);
   /* Time base configuration */
   TIM_TimeBaseStructure.TIM_Period = 65535;
   TIM_TimeBaseStructure.TIM_Prescaler = PrescalerValue;
@@ -192,8 +191,15 @@ int main(void) {
   
  
 
-  USART_puts(USART1, "Init complete! Hello World!\r\n"); // just send a message to indicate that it works
+  //USART_puts(USART1, "Init complete! Hello World!\r\n"); // just send a message to indicate that it works
+  setbuf(stdout, NULL);
+  printf("Hello world\r\n");
+  printf("Press return to continue\r\n");
 
+	//Wait for a return key press in the OpenOCD/GDB server window
+  getchar();
+
+  printf("Goodbye world\r\n");
   while (1){  
     /*
      * You can do whatever you want in here 
@@ -255,17 +261,17 @@ void InitGPIO(void)
 {
 	/* enable the peripheral clock for the GPIOD
 	 */
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 	
 	GPIO_InitTypeDef  GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13| GPIO_Pin_14| GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Init(GPIOE, &GPIO_InitStructure);
 	
-	GPIO_ResetBits(GPIOA, GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
+	GPIO_ResetBits(GPIOE, GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
 }
 
 void PutNumber(USART_TypeDef *usart, uint32_t x)
