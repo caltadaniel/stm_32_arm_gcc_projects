@@ -1,10 +1,4 @@
 
-This repository contains source code for the articles
-* [STM32 Discovery Development on Linux](http://www.wolinlabs.com/blog/linux.stm32.discovery.gcc.html) 
-* [STM32F4 Discovery Semihosting with the GNU Tools for Embedded ARM Processors Toolchain](http://www.wolinlabs.com/blog/stm32f4.semihosting.html)
-* [STM32F4 Discovery Virtual COM/Serial Port](http://www.wolinlabs.com/blog/stm32f4.virtual.com.port.html)
-
-
 
 <br>
 Contents:
@@ -12,6 +6,8 @@ Contents:
 1. LED blinker sample code (buildable)
 2. USB virtual serial port code (buildable)
 2. Semihosting Hello World sample code (buildable)
+3. Template file with gdb settings (buildable)
+4. Playground1 with example of multiple periphrial use in the same program
 3. STM sample code (buildable)
 4. STM libraries and headers
 
