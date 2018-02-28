@@ -17,7 +17,12 @@ STM libraries, headers, and samples have been modified to work with GNU Tools fo
 
 STM's approach toward 'library code' is somewhat non-traditional.  Rather than building libraries up front and linking them with your source, STM appears to intend for you to include their individual source files in your code's build.   Some of their source files include local headers and modules (i.e. stm32f4xx\_conf.h, stm32f4xx\_it.c/h, system\_stm32f4xx.c, etc) that you modify/store in your source tree.  Because of this, building the library up front wouldn't work properly, as the configuration for some library modules could vary from project to project.
 
+<br>
 
+In order to have the projects working with make, you have to add two folders to the PATH variables.
+I made it with the script myenvvars.sh stored in /etc/profile.d. 
+The content is:
+export PATH=$PATH:/home/blacksmith/openocd-0.10.0/bin:/home/blacksmith/opt/gcc-arm-none-eabi-7-2017-q4-major/bin
 
 
 
