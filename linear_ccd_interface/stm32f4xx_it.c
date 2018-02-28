@@ -44,6 +44,11 @@ extern __IO uint16_t CCR1_Val;
 extern __IO uint16_t CCR2_Val;
 extern __IO uint16_t CCR3_Val;
 extern __IO uint16_t CCR4_Val;
+extern __IO uint64_t integrationTime;
+extern __IO _Bool startIntegration;
+extern __IO _Bool stopIntegration;
+__O  _Bool integrationInProgress;
+__O  uint64_t integrationCount;
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 
@@ -167,17 +172,31 @@ void TIM3_IRQHandler(void)
   {
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
 
-    /* LED4 toggling with frequency = 4.57 Hz */
-    STM_EVAL_LEDToggle(LED4);
-	capture = TIM_GetCapture1(TIM3);
+    /* CCD clock */
+    GPIO_ToggleBits(GPIOE, GPIO_Pin_13|GPIO_Pin_14);
+    capture = TIM_GetCapture1(TIM3);
     TIM_SetCompare1(TIM3, capture + CCR1_Val);
+    if (startIntegration && !integrationInProgress)
+    {
+      integrationInProgress = 1;
+      integrationCount = 0;
+    }
+    else if(integrationInProgress && integrationCount < integrationTime)
+    {
+      integrationCount ++;
+    }
+    else if(integrationInProgress && integrationCount >= integrationTime)
+    {
+      integrationInProgress = 0;
+      stopIntegration = 1;
+    }
   }
   else if (TIM_GetITStatus(TIM3, TIM_IT_CC2) != RESET)
   {
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC2);
 
     /* LED3 toggling with frequency = 9.15 Hz */
-    STM_EVAL_LEDToggle(LED3);
+    //STM_EVAL_LEDToggle(LED3);
     capture = TIM_GetCapture2(TIM3);
     TIM_SetCompare2(TIM3, capture + CCR2_Val);
   }
@@ -186,7 +205,7 @@ void TIM3_IRQHandler(void)
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC3);
 
     /* LED5 toggling with frequency = 18.31 Hz */
-    STM_EVAL_LEDToggle(LED5);
+    //STM_EVAL_LEDToggle(LED5);
     capture = TIM_GetCapture3(TIM3);
     TIM_SetCompare3(TIM3, capture + CCR3_Val);
   }
@@ -195,7 +214,7 @@ void TIM3_IRQHandler(void)
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC4);
 
     /* LED6 toggling with frequency = 36.62 Hz */
-    STM_EVAL_LEDToggle(LED6);
+    //STM_EVAL_LEDToggle(LED6);
     capture = TIM_GetCapture4(TIM3);
     TIM_SetCompare4(TIM3, capture + CCR4_Val);
   }

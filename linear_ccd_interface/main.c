@@ -34,6 +34,7 @@
   */ 
 
 /* Private typedef -----------------------------------------------------------*/
+enum state {idle = 0, start = 1, running = 2, stop = 3};
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -41,12 +42,16 @@ static __IO uint32_t uwTimingDelay;
 RCC_ClocksTypeDef RCC_Clocks;
 TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 TIM_OCInitTypeDef  TIM_OCInitStructure;
+enum state machineState;
 
-__IO uint16_t CCR1_Val = 54618;
+__IO uint16_t CCR1_Val = 2;
 __IO uint16_t CCR2_Val = 27309;
 __IO uint16_t CCR3_Val = 13654;
 __IO uint16_t CCR4_Val = 1; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
 // so the TIM3 Channel 1 generates an interrupt each 13.65ms
+__IO _Bool startIntegration = 0;
+__IO _Bool stopIntegration = 0;
+__IO uint64_t integrationTime;
 uint16_t PrescalerValue = 0;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -160,13 +165,41 @@ GPIO_InitTypeDef GPIO_InitStructure;
   TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
 
   /* TIM3 enable counter */
-  TIM_Cmd(TIM3, ENABLE);
+  TIM_Cmd(TIM3, DISABLE);
   
   setbuf(stdout, NULL);
-  printf("Hello world\r\n");
+  printf("Entering the machine\r\n");
+  machineState = idle;
   /* Infinite loop */
   while (1)
   {
+    /* here we define the machine state that control the ccd behavior*/
+    switch (machineState)
+    {
+      case idle:
+        getchar();
+        /*enable the clock generation  */
+        TIM_Cmd(TIM3, ENABLE);
+        break;
+      case start:
+        startIntegration = 1;
+        machineState = running;
+        break;
+      case running:
+        if (stopIntegration)
+        {
+          machineState = stop;
+          stopIntegration = 0;
+        }          
+        break;
+      case stop:
+        TIM_Cmd(TIM3, DISABLE);
+        machineState = idle;
+        break;
+      default:
+        break;
+    }
+    
   }
 }
 
@@ -236,7 +269,8 @@ void InitGPIO(void)
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 	GPIO_Init(GPIOE, &GPIO_InitStructure);
 	
-	GPIO_ResetBits(GPIOE, GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
+	GPIO_ResetBits(GPIOE, GPIO_Pin_13|GPIO_Pin_15);
+  GPIO_SetBits(GPIOE, GPIO_Pin_14);
 }
 
 #ifdef  USE_FULL_ASSERT
