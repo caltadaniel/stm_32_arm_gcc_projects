@@ -178,8 +178,10 @@ void TIM3_IRQHandler(void)
     TIM_SetCompare1(TIM3, capture + CCR1_Val);
     if (startIntegration && !integrationInProgress)
     {
+      startIntegration = 0;
       integrationInProgress = 1;
       integrationCount = 0;
+      GPIO_SetBits(GPIOE, GPIO_Pin_12);
     }
     else if(integrationInProgress && integrationCount < integrationTime)
     {
@@ -189,34 +191,16 @@ void TIM3_IRQHandler(void)
     {
       integrationInProgress = 0;
       stopIntegration = 1;
+      GPIO_ResetBits(GPIOE, GPIO_Pin_12);
     }
   }
-  else if (TIM_GetITStatus(TIM3, TIM_IT_CC2) != RESET)
+  if (TIM_GetITStatus(TIM3, TIM_IT_CC2) != RESET)
   {
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC2);
-
-    /* LED3 toggling with frequency = 9.15 Hz */
-    //STM_EVAL_LEDToggle(LED3);
+    GPIO_ToggleBits(GPIOE, GPIO_Pin_15|GPIO_Pin_11);
     capture = TIM_GetCapture2(TIM3);
     TIM_SetCompare2(TIM3, capture + CCR2_Val);
-  }
-  else if (TIM_GetITStatus(TIM3, TIM_IT_CC3) != RESET)
-  {
-    TIM_ClearITPendingBit(TIM3, TIM_IT_CC3);
-
-    /* LED5 toggling with frequency = 18.31 Hz */
-    //STM_EVAL_LEDToggle(LED5);
-    capture = TIM_GetCapture3(TIM3);
-    TIM_SetCompare3(TIM3, capture + CCR3_Val);
-  }
-  else
-  {
-    TIM_ClearITPendingBit(TIM3, TIM_IT_CC4);
-
-    /* LED6 toggling with frequency = 36.62 Hz */
-    //STM_EVAL_LEDToggle(LED6);
-    capture = TIM_GetCapture4(TIM3);
-    TIM_SetCompare4(TIM3, capture + CCR4_Val);
+    
   }
 }
 /**

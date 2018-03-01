@@ -44,14 +44,14 @@ TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 TIM_OCInitTypeDef  TIM_OCInitStructure;
 enum state machineState;
 
-__IO uint16_t CCR1_Val = 2;
-__IO uint16_t CCR2_Val = 27309;
+__IO uint16_t CCR1_Val = 10;
+__IO uint16_t CCR2_Val = 2;
 __IO uint16_t CCR3_Val = 13654;
 __IO uint16_t CCR4_Val = 1; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
 // so the TIM3 Channel 1 generates an interrupt each 13.65ms
 __IO _Bool startIntegration = 0;
 __IO _Bool stopIntegration = 0;
-__IO uint64_t integrationTime;
+__IO uint64_t integrationTime = 10;
 uint16_t PrescalerValue = 0;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -162,11 +162,10 @@ GPIO_InitTypeDef GPIO_InitStructure;
   TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Disable);
    
   /* TIM Interrupts enable */
-  TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
-
+  //TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
+  TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2, ENABLE);
   /* TIM3 enable counter */
-  TIM_Cmd(TIM3, DISABLE);
-  
+  TIM_Cmd(TIM3, ENABLE);
   setbuf(stdout, NULL);
   printf("Entering the machine\r\n");
   machineState = idle;
@@ -177,11 +176,14 @@ GPIO_InitTypeDef GPIO_InitStructure;
     switch (machineState)
     {
       case idle:
-        getchar();
+        //printf("Idle. Waiting for start\r\n");
+        //getchar();
         /*enable the clock generation  */
-        TIM_Cmd(TIM3, ENABLE);
+        Delay(1);
+        machineState = start;
         break;
       case start:
+        //printf("Start integration\r\n");
         startIntegration = 1;
         machineState = running;
         break;
@@ -193,8 +195,9 @@ GPIO_InitTypeDef GPIO_InitStructure;
         }          
         break;
       case stop:
-        TIM_Cmd(TIM3, DISABLE);
+        //TIM_Cmd(TIM3, DISABLE);
         machineState = idle;
+        //printf("Stop integration\r\n");
         break;
       default:
         break;
@@ -262,15 +265,15 @@ void InitGPIO(void)
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 	
 	GPIO_InitTypeDef  GPIO_InitStructure;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13| GPIO_Pin_14| GPIO_Pin_15;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 |GPIO_Pin_12 | GPIO_Pin_13| GPIO_Pin_14| GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 	GPIO_Init(GPIOE, &GPIO_InitStructure);
 	
-	GPIO_ResetBits(GPIOE, GPIO_Pin_13|GPIO_Pin_15);
-  GPIO_SetBits(GPIOE, GPIO_Pin_14);
+	GPIO_ResetBits(GPIOE, GPIO_Pin_12 | GPIO_Pin_13|GPIO_Pin_15);
+  GPIO_SetBits(GPIOE, GPIO_Pin_10 |GPIO_Pin_11 |GPIO_Pin_14);
 }
 
 #ifdef  USE_FULL_ASSERT
