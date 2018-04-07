@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    Project/STM32F4xx_StdPeriph_Templates/main.c 
-  * @author  MCD Application Team
+  * @author  Daniele Caltabiano
   * @version V1.8.0
   * @date    04-November-2016
   * @brief   Main program body
@@ -21,6 +21,13 @@
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
+  * 
+  * @description
+  * This software is made to control the magnetic tile
+  * PINOUT
+  * AOUT -> PC2 (CH 7 ADC)
+  * CLR  -> PE12
+  * CLK  -> PE13
   *
   ******************************************************************************
   */
@@ -39,10 +46,17 @@
 /* Private variables ---------------------------------------------------------*/
 static __IO uint32_t uwTimingDelay;
 RCC_ClocksTypeDef RCC_Clocks;
+int pixelOrder[] = {26, 27, 18, 19, 10, 11, 2, 3, 1, 0, 9, 8, 17, 16, 25, 24};
+int subtileOrder[] = {0, 2, 1, 3};
+int subtileOffset[] = {0, 4, 32, 36};
+uint16_t frame[64];
 
 /* Private function prototypes -----------------------------------------------*/
 static void Delay(__IO uint32_t nTime);
 void InitGPIO(void);
+void SelectNextMagel(void);
+void ResetCounter(void);
+void ReadArray(void);
 
 
 /* Private functions ---------------------------------------------------------*/
@@ -64,7 +78,7 @@ int main(void)
 
   /* SysTick end of count event each 10ms */
   RCC_GetClocksFreq(&RCC_Clocks);
-  SysTick_Config(RCC_Clocks.HCLK_Frequency / 100);
+  SysTick_Config(RCC_Clocks.HCLK_Frequency / 10000);
   
   /* Add your application code here */
   /* Insert 50 ms delay */
@@ -109,6 +123,9 @@ int main(void)
   /* Infinite loop */
   while (1)
   {
+    ReadArray();
+    Delay(10);
+    
     
   }
 }
@@ -156,6 +173,54 @@ void InitGPIO(void)
 	GPIO_ResetBits(GPIOE, GPIO_Pin_12 | GPIO_Pin_13|GPIO_Pin_15);
   GPIO_SetBits(GPIOE, GPIO_Pin_10 |GPIO_Pin_11 |GPIO_Pin_14);
 }
+
+/**
+  * @brief  Select the next magel in the array.
+  * @param  None
+  * @retval None
+  */
+void SelectNextMagel(void)
+{
+  GPIO_SetBits(GPIOE, GPIO_Pin_13);
+  /* just wait*/
+  Delay(1);
+  GPIO_ResetBits(GPIOE, GPIO_Pin_13);
+  
+}
+void ResetCounter(void)
+{
+  GPIO_SetBits(GPIOE, GPIO_Pin_12);
+  Delay(1);
+  GPIO_ResetBits(GPIOE, GPIO_Pin_12);
+}
+
+void ReadArray(void)
+{
+    ResetCounter();
+    SelectNextMagel();
+    uint16_t arrPos = 0;
+    for (int curSubtileIdx = 0; curSubtileIdx < 4; curSubtileIdx++) {
+      //printf("Actual subtile: %d\r\n", curSubtileIdx);
+      for (int curIdx = 0; curIdx < 16; curIdx++) {
+        // Read value
+        int value = arrPos;
+
+        //terminal.println(value);
+        //delay(10);
+
+        // Store value in correct frame location
+        int frameOffset = pixelOrder[curIdx] + subtileOffset[subtileOrder[curSubtileIdx]];
+        //terminal.println(frameOffset);
+        //delay(25);
+        frame[frameOffset] = value;
+
+        // Increment to next pixel
+        SelectNextMagel();
+        arrPos ++;
+      }
+    }
+}
+
 
 #ifdef  USE_FULL_ASSERT
 
