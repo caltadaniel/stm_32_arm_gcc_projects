@@ -34,32 +34,16 @@
   */ 
 
 /* Private typedef -----------------------------------------------------------*/
-enum state {idle = 0, start = 1, running = 2, stop = 3};
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 static __IO uint32_t uwTimingDelay;
 RCC_ClocksTypeDef RCC_Clocks;
-TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-TIM_OCInitTypeDef  TIM_OCInitStructure;
-enum state machineState;
-
-__IO uint16_t CCR1_Val = 2;
-__IO uint16_t CCR2_Val = 2;
-__IO uint16_t CCR3_Val = 13654;
-__IO uint16_t CCR4_Val = 1; //register value The TIM3 CC1 register value is equal to 54618,  CC1 update rate = TIM3 counter clock / CCR1_Val = 9.154 Hz,
-// so the TIM3 Channel 1 generates an interrupt each 13.65ms
-__IO _Bool startIntegration = 0;
-__IO _Bool stopIntegration = 0;
-__IO uint64_t integrationTime = 100;
-__I  uint32_t phase_length = 4;
-__I  uint32_t cp_rs_length = 1;
-uint16_t PrescalerValue = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 static void Delay(__IO uint32_t nTime);
 void InitGPIO(void);
-void TIM_Config(void);
+
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -70,7 +54,7 @@ void TIM_Config(void);
   */
 int main(void)
 {
-GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitTypeDef GPIO_InitStructure;
  
  /*!< At this stage the microcontroller clock setting is already configured, 
        this is done through SystemInit() function which is called from startup
@@ -118,92 +102,13 @@ GPIO_InitTypeDef GPIO_InitStructure;
   RCC_MCO2Config(RCC_MCO2Source_SYSCLK, RCC_MCO2Div_4);
   
   InitGPIO();
-  TIM_Config();
-  /* Compute the prescaler value */
-  PrescalerValue = (uint16_t) ((SystemCoreClock/2) / 500000) - 1;
-  /* Time base configuration */
-  TIM_TimeBaseStructure.TIM_Period = 65535;
-  TIM_TimeBaseStructure.TIM_Prescaler = PrescalerValue;
-  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
-  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-
-  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
   
-  /* Output Compare Timing Mode configuration: Channel1. For now we use onli this */
-  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_Pulse = CCR1_Val;
-  TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-
-  TIM_OC1Init(TIM3, &TIM_OCInitStructure);
-
-  TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Disable);
-  
-  /* Output Compare Timing Mode configuration: Channel2 */
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_Pulse = CCR2_Val;
-
-  TIM_OC2Init(TIM3, &TIM_OCInitStructure);
-
-  TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Disable);
-
-  /* Output Compare Timing Mode configuration: Channel3 */
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_Pulse = CCR3_Val;
-
-  TIM_OC3Init(TIM3, &TIM_OCInitStructure);
-
-  TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Disable);
-
-  /* Output Compare Timing Mode configuration: Channel4 */
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_Pulse = CCR4_Val;
-
-  TIM_OC4Init(TIM3, &TIM_OCInitStructure);
-
-  TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Disable);
-   
-  /* TIM Interrupts enable */
-  //TIM_ITConfig(TIM3, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
-  TIM_ITConfig(TIM3, TIM_IT_CC1, ENABLE);
-  /* TIM3 enable counter */
-  TIM_Cmd(TIM3, ENABLE);
   setbuf(stdout, NULL);
   printf("Entering the machine\r\n");
-  machineState = idle;
+  
   /* Infinite loop */
   while (1)
   {
-    /* here we define the machine state that control the ccd behavior*/
-    switch (machineState)
-    {
-      case idle:
-        //printf("Idle. Waiting for start\r\n");
-        //getchar();
-        /*enable the clock generation  */
-        Delay(1);
-        machineState = start;
-        break;
-      case start:
-        //printf("Start integration\r\n");
-        startIntegration = 1;
-        machineState = running;
-        break;
-      case running:
-        if (stopIntegration)
-        {
-          machineState = stop;
-          stopIntegration = 0;
-        }          
-        break;
-      case stop:
-        //TIM_Cmd(TIM3, DISABLE);
-        machineState = idle;
-        //printf("Stop integration\r\n");
-        break;
-      default:
-        break;
-    }
     
   }
 }
@@ -233,36 +138,10 @@ void TimingDelay_Decrement(void)
   }
 }
 
-void TIM_Config(void)
-{
-	NVIC_InitTypeDef NVIC_InitStructure;
-
-  /* TIM3 clock enable */
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-
-  /* Enable the TIM3 gloabal Interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-  
-    /* Initialize Leds mounted on STM32F4-Discovery board */
-  STM_EVAL_LEDInit(LED4);
-  STM_EVAL_LEDInit(LED3);
-  STM_EVAL_LEDInit(LED5);
-  STM_EVAL_LEDInit(LED6);
-
-  /* Turn on LED4, LED3, LED5 and LED6 */
-  STM_EVAL_LEDOn(LED4);
-  STM_EVAL_LEDOn(LED3);
-  STM_EVAL_LEDOn(LED5);
-  STM_EVAL_LEDOn(LED6);
-}
 
 void InitGPIO(void)
 {
-	/* enable the peripheral clock for the GPIOD
+	/* enable the peripheral clock for the GPIOe
 	 */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 	

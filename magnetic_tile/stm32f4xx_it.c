@@ -39,23 +39,6 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-uint16_t capture = 0;
-extern __IO uint16_t CCR1_Val;
-extern __IO uint16_t CCR2_Val;
-extern __IO uint16_t CCR3_Val;
-extern __IO uint16_t CCR4_Val;
-extern __IO uint64_t integrationTime;
-extern __IO _Bool startIntegration;
-extern __IO _Bool stopIntegration;
-extern __I  uint32_t phase_length;
-extern __I  uint32_t cp_rs_length;
-__O  _Bool integrationInProgress;
-__O  uint64_t integrationCount;
-uint64_t phase_counter;
-uint64_t cp_rs_counter;
-_Bool phase;
-_Bool RS;
-_Bool CP;
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 
@@ -173,46 +156,7 @@ void SysTick_Handler(void)
   * @param  None
   * @retval None
   */
-void TIM3_IRQHandler(void)
-{
-  if (TIM_GetITStatus(TIM3, TIM_IT_CC1) != RESET)
-  {
-    TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
 
-    /* CCD clock */
-    GPIO_ToggleBits(GPIOE, GPIO_Pin_10);
-    if(integrationInProgress && phase_counter >= phase_length - 1)
-    {
-      phase_counter = 0;
-      GPIO_ToggleBits(GPIOE, GPIO_Pin_13|GPIO_Pin_14);
-    }
-    if (startIntegration && !integrationInProgress)
-    {
-      startIntegration = 0;
-      integrationInProgress = 1;
-      integrationCount = 0;
-      GPIO_SetBits(GPIOE, GPIO_Pin_12 | GPIO_Pin_13|GPIO_Pin_14);
-      phase_counter = 0;
-      cp_rs_counter = 0;
-      phase = 0;
-      CP = 1;
-      RS = 1;
-    }
-    else if(integrationInProgress && integrationCount < integrationTime)
-    {
-      integrationCount ++;
-      phase_counter ++;
-    }
-    else if(integrationInProgress && integrationCount >= integrationTime)
-    {
-      integrationInProgress = 0;
-      stopIntegration = 1;
-      GPIO_ResetBits(GPIOE, GPIO_Pin_12);
-    }
-    
-    capture = TIM_GetCapture1(TIM3);
-    TIM_SetCompare1(TIM3, capture + CCR1_Val);
-  }
   /*
   if (TIM_GetITStatus(TIM3, TIM_IT_CC2) != RESET)
   {
@@ -223,7 +167,7 @@ void TIM3_IRQHandler(void)
     
   }
   */
-}
+
 /**
   * @brief  This function handles PPP interrupt request.
   * @param  None
